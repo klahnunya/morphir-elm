@@ -8,7 +8,8 @@ case class Student(firstName: String, lastname: String, email: String, age: Int)
 case class SchoolWithStudents(school: School, students: Seq[Student])
 
 object Example extends App {
-  val spark = SparkSession.builder().master("local").appName("Example").getOrCreate()
+  val spark =
+    SparkSession.builder().master("local").appName("Example").getOrCreate()
   import spark.implicits._
 
   val school = School("1234", "Eaton Square")
@@ -18,7 +19,8 @@ object Example extends App {
   val student3 = Student("Lewis", "Hamilton", "lewis@mail.com", 20)
   val student4 = Student("Max", "Verstappen", "max@mail.com", 20)
 
-  val schoolWithStudents = SchoolWithStudents(school, Seq(student1, student2, student3, student4))
+  val schoolWithStudents =
+    SchoolWithStudents(school, Seq(student1, student2, student3, student4))
 
   //creating dataframe
   val schoolWithStudentsSeq = Seq(schoolWithStudents)
@@ -34,7 +36,8 @@ object Example extends App {
   flattenDF.show()
 
   //filter rows
-  val filterDF = flattenDF.filter($"firstName" === "Lewis").sort($"lastName".asc)
+  val filterDF =
+    flattenDF.filter($"firstName" === "Lewis").sort($"lastName".asc)
   filterDF.show()
 
 }
