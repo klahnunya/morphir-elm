@@ -5,19 +5,6 @@ module Morphir.JsonSchema.AST exposing (..)
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id" : "https://example.com/types.schema.json",
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
     {
         "$id": "https://example.com/quantity.schema.json",
          "$schema": "https://json-schema.org/draft/2020-12/schema",
