@@ -22,13 +22,15 @@ representation of files generated. The consumer is responsible for getting the i
 to the file-system.
 -}
 
-import Dict
+import Dict exposing (Dict)
 import Morphir.File.FileMap exposing (FileMap)
 import Morphir.IR.AccessControlled exposing (AccessControlled)
 import Morphir.IR.Distribution as Distribution exposing (Distribution)
+import Morphir.IR.FQName exposing (FQName)
 import Morphir.IR.Module as Module exposing (ModuleName)
+import Morphir.IR.Name exposing (Name)
 import Morphir.IR.Package as Package
-import Morphir.IR.Type exposing (Type)
+import Morphir.IR.Type as Type exposing (Type)
 import Set exposing (Set)
 
 
@@ -36,11 +38,22 @@ type alias Options =
     {}
 
 
+type alias Schema =
+    { id : String
+    , schema : String
+    , definitions : Dict FQName Definition
+    }
+
+
 type alias CompilationUnit =
     { dirPath : List String
     , fileName : String
     , fileContent : String
     }
+
+
+type alias Definition =
+    {}
 
 
 type Error
@@ -59,23 +72,30 @@ mapDistribution opt distro =
 
 mapPackageDefinition : Options -> Distribution -> Package.PackageName -> Package.Definition ta (Type ()) -> FileMap
 mapPackageDefinition opt distribution packagePath packageDef =
-    packageDef.modules
-        |> Dict.toList
-        |> List.concatMap
+    Dict.toList packageDef.modules
+        |> List.map
             (\( modulePath, moduleImpl ) ->
-                mapModuleTypes opt distribution moduleImpl
+                moduleImpl.value.types
+                    |> Dict.toList
                     |> List.map
-                        (\compilationUnit ->
-                            ( ( compilationUnit.dirPath, compilationUnit.fileName ), compilationUnit.fileContent )
+                        (\( name, accessDocumentedTypeDef ) ->
+                            let
+                                fqName =
+                                    ( packagePath, modulePath, name )
+                            in
+                            mapType fqName accessDocumentedTypeDef.value.value
                         )
             )
         |> Dict.fromList
 
 
-mapModuleTypes : Options -> Distribution -> AccessControlled (Module.Definition ta va) -> List CompilationUnit
-mapModuleTypes options distribution accessControlled =
-    List.singleton
-        { fileName = "TestJson.json"
-        , dirPath = [ "json", "schema" ]
-        , fileContent = "{\"test\": 1}"
-        }
+extractTypes : Module.Definition ta (Type ()) -> List ( Name, Type.Definition ta )
+extractTypes definition =
+    definition.types
+        |> Dict.toList
+        |> List.map
+
+
+mapType : FQName -> Type.Definition ta -> ( FQName, Definition )
+mapType typ =
+    Debug.todo "Todo"

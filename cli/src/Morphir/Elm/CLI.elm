@@ -137,6 +137,9 @@ update msg model =
 
         Generate ( optionsJson, packageDistJson ) ->
             let
+                _ =
+                    Debug.log "==============" targetOption
+
                 targetOption =
                     Decode.decodeValue (field "target" string) optionsJson
 

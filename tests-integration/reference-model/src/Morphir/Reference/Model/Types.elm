@@ -10,19 +10,25 @@ type alias Quantity =
     Int
 
 
-
 type alias Cart =
-    List { title: String, productQuantity: Quantity}
+    List { title : String, productQuantity : Quantity }
+
 
 type Custom
     = CustomNoArg
-    | CustomOneArg (Maybe Bool)
+    | CustomOneArg Bool
     | CustomTwoArg String Quantity
+
+
+type CustomOne
+    = CustomOneNoArg
+    | CustomOneOneArg (Maybe Bool)
+    | CustomOneTwoArg String Quantity
+
 
 type Maybe a
     = Just a
     | Nothing
-
 
 
 {-| Value type example
