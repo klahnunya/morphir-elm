@@ -28,8 +28,9 @@ import Morphir.IR.AccessControlled exposing (AccessControlled)
 import Morphir.IR.Distribution as Distribution exposing (Distribution)
 import Morphir.IR.FQName exposing (FQName)
 import Morphir.IR.Module as Module exposing (ModuleName)
-import Morphir.IR.Name exposing (Name)
-import Morphir.IR.Package as Package
+import Morphir.IR.Name as Name exposing (Name)
+import Morphir.IR.Package as Package exposing (PackageName)
+import Morphir.IR.Path as Path
 import Morphir.IR.Type as Type exposing (Type)
 import Set exposing (Set)
 
@@ -66,27 +67,16 @@ representation of files generated.
 mapDistribution : Options -> Distribution -> FileMap
 mapDistribution opt distro =
     case distro of
-        Distribution.Library packageName dependencies packageDef ->
-            mapPackageDefinition opt distro packageName packageDef
+        Distribution.Library packageName _ packageDef ->
+            Dict.singleton ( [], Path.toString Name.toTitleCase "." packageName ++ ".json" )
+                (generateSchema packageName)
 
 
-mapPackageDefinition : Options -> Distribution -> Package.PackageName -> Package.Definition ta (Type ()) -> FileMap
-mapPackageDefinition opt distribution packagePath packageDef =
-    Dict.toList packageDef.modules
-        |> List.map
-            (\( modulePath, moduleImpl ) ->
-                moduleImpl.value.types
-                    |> Dict.toList
-                    |> List.map
-                        (\( name, accessDocumentedTypeDef ) ->
-                            let
-                                fqName =
-                                    ( packagePath, modulePath, name )
-                            in
-                            mapType fqName accessDocumentedTypeDef.value.value
-                        )
-            )
-        |> Dict.fromList
+generateSchema : PackageName -> String
+generateSchema packageName =
+    "{ \"$id\"  : \"https://example.com/"
+        ++ Path.toString Name.toSnakeCase "-" packageName
+        ++ ".schema.json\", \"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"$defs\" : {} }"
 
 
 extractTypes : Module.Definition ta (Type ()) -> List ( Name, Type.Definition ta )
@@ -94,6 +84,9 @@ extractTypes definition =
     definition.types
         |> Dict.toList
         |> List.map
+            (\( name, accessControlled ) ->
+                ( name, accessControlled.value.value )
+            )
 
 
 mapType : FQName -> Type.Definition ta -> ( FQName, Definition )
