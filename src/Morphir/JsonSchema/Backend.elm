@@ -26,34 +26,16 @@ import Dict exposing (Dict)
 import Morphir.File.FileMap exposing (FileMap)
 import Morphir.IR.AccessControlled exposing (AccessControlled)
 import Morphir.IR.Distribution as Distribution exposing (Distribution)
-import Morphir.IR.FQName exposing (FQName)
 import Morphir.IR.Module as Module exposing (ModuleName)
 import Morphir.IR.Name as Name exposing (Name)
 import Morphir.IR.Package as Package exposing (PackageName)
-import Morphir.IR.Path as Path
+import Morphir.IR.Path as Path exposing (Path)
 import Morphir.IR.Type as Type exposing (Type)
-import Set exposing (Set)
+import Morphir.JsonSchema.AST exposing (QualifiedName, Schema, SchemaType)
+import Morphir.JsonSchema.PrettyPrinter exposing (encodeSchema)
 
 
 type alias Options =
-    {}
-
-
-type alias Schema =
-    { id : String
-    , schema : String
-    , definitions : Dict FQName Definition
-    }
-
-
-type alias CompilationUnit =
-    { dirPath : List String
-    , fileName : String
-    , fileContent : String
-    }
-
-
-type alias Definition =
     {}
 
 
@@ -68,27 +50,52 @@ mapDistribution : Options -> Distribution -> FileMap
 mapDistribution opt distro =
     case distro of
         Distribution.Library packageName _ packageDef ->
-            Dict.singleton ( [], Path.toString Name.toTitleCase "." packageName ++ ".json" )
-                (generateSchema packageName)
+            mapPackageDefinition packageName packageDef
 
 
-generateSchema : PackageName -> String
-generateSchema packageName =
-    "{ \"$id\"  : \"https://example.com/"
-        ++ Path.toString Name.toSnakeCase "-" packageName
-        ++ ".schema.json\", \"$schema\": \"https://json-schema.org/draft/2020-12/schema\", \"$defs\" : {} }"
+mapPackageDefinition : PackageName -> Package.Definition ta (Type ()) -> FileMap
+mapPackageDefinition packageName packageDefinition =
+    packageDefinition
+        |> generateSchema packageName
+        |> encodeSchema
+        |> Dict.singleton ( [], Path.toString Name.toTitleCase "." packageName ++ ".json" )
 
 
-extractTypes : Module.Definition ta (Type ()) -> List ( Name, Type.Definition ta )
-extractTypes definition =
+generateSchema : PackageName -> Package.Definition ta (Type ()) -> Schema
+generateSchema packageName packageDefinition =
+    let
+        schemaTypeDefinitions =
+            packageDefinition.modules
+                |> Dict.foldl
+                    (\modName modDef listSoFar ->
+                        extractTypes modName modDef.value
+                            |> List.map
+                                (\( qualifiedName, typeDef ) ->
+                                    mapType qualifiedName typeDef
+                                )
+                            |> (\lst -> listSoFar ++ lst)
+                    )
+                    []
+                |> Dict.fromList
+    in
+    { dirPath = []
+    , fileName = ""
+    , id = "https://example.com/" ++ Path.toString Name.toSnakeCase "-" packageName ++ ".schema.json"
+    , schemaVersion = "https://json-schema.org/draft/2020-12/schema"
+    , definitions = schemaTypeDefinitions
+    }
+
+
+extractTypes : ModuleName -> Module.Definition ta (Type ()) -> List ( QualifiedName, Type.Definition ta )
+extractTypes modName definition =
     definition.types
         |> Dict.toList
         |> List.map
             (\( name, accessControlled ) ->
-                ( name, accessControlled.value.value )
+                ( ( modName, name ), accessControlled.value.value )
             )
 
 
-mapType : FQName -> Type.Definition ta -> ( FQName, Definition )
-mapType typ =
-    Debug.todo "Todo"
+mapType : QualifiedName -> Type.Definition ta -> ( QualifiedName, SchemaType )
+mapType qualifiedName definition =
+    ( qualifiedName, {} )
